@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="DMPO: Dispersive MeanFlow Policy Optimization - One Step Is Enough for Real-Time Robotic Control">
+    <title>DMPO: Dispersive MeanFlow Policy Optimization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Avenir, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: black;
+            background-color: #ffffff;
+            padding-top: 45px;
+        }
+
+        /* Gradient Animation */
+        @keyframes gradient-shift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(65, 105, 225, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(255, 69, 0, 0.4);
+            }
+        }
+
+        .container {
+            max-width: 975px;
+            margin: 0 auto;
+            padding: 0 22px;
+        }
+
+        header {
+            background: #ffffff;
+            color: #333;
+            padding: 30px 20px 22px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+            line-height: 1.125;
+            max-width: 975px;
+            margin-left: auto;
+            margin-right: auto;
+            background: linear-gradient(45deg, red, #4169E1, #FF4500, #4169E1, red);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 5s ease infinite;
+        }
+
+        @media (max-width: 1100px) {
+            h1 {
+                font-size: 2.4em;
+            }
+        }
+
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 2em;
+            }
+        }
+
+        .subtitle {
+            font-size: 2.2em;
+            margin-bottom: 1.5rem;
+            color: #363636;
+            font-weight: 700;
+            line-height: 1.125;
+        }
+
+        .authors {
+            font-size: 22px;
+            margin-top: 1.5rem;
+            margin-bottom: 0.85rem;
+            line-height: 1.6;
+            color: black;
+            font-weight: 500;
+        }
+
+        .authors a {
+            color: black;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .authors a:hover {
+            color: #4169E1;
+        }
+
+        .affiliation {
+            font-size: 19px;
+            color: black;
+            margin-bottom: 1.8rem;
+            line-height: 1.6;
+        }
+
+        .author-block {
+            display: inline;
+        }
+
+        .link-block {
+            display: inline-block;
+        }
+
+        .links {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            max-width: 975px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5em 1em;
+            background: #363636;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 290486px;
+            font-weight: 400;
+            font-size: 1rem;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            line-height: 1.5;
+            gap: 0.5em;
+        }
+
+        .btn:hover {
+            background-color: #292929;
+            color: #fff;
+        }
+
+        .btn .icon {
+            font-size: 1.1em;
+            line-height: 1;
+        }
+
+        /* Video Section */
+        .hero-video {
+            background: #ffffff;
+            padding: 30px 22px;
+            text-align: center;
+        }
+
+        .hero-video .container {
+            position: relative;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 975px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        .video-wrapper iframe {
+            width: 100%;
+            height: 548px;
+            border: none;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .video-wrapper iframe {
+                height: 300px;
+            }
+        }
+
+        /* Gradient Divider */
+        .gradient-divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4169E1 20%, #FF4500 50%, #4169E1 80%, transparent);
+            margin: 0;
+            border: none;
+        }
+
+        /* Section Styles */
+        .section {
+            background: transparent;
+            padding: 30px 22px;
+        }
+
+        .section-alternate {
+            background: rgb(235, 235, 235);
+            background: linear-gradient(180deg, rgba(235,235,235,0.3) 0%, rgba(235,235,235,1) 50%, rgba(235,235,235,0.3) 100%);
+            padding: 30px 22px;
+        }
+
+        .section-white {
+            background-color: #ffffff;
+            padding: 30px 22px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: black;
+            font-weight: 700;
+            line-height: 1.125;
+            text-align: center;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem 0;
+            color: black;
+            font-weight: 600;
+            line-height: 1.125;
+        }
+
+        .content {
+            line-height: 1.7;
+            font-size: 16px;
+            color: black;
+        }
+
+        .tldr {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 6px;
+            border-left: 4px solid #4169E1;
+            margin: 20px 0;
+            font-size: 1rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .highlight {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .research-question {
+            color: #c7254e;
+            font-weight: 700;
+            font-size: 1.15em;
+            margin: 25px 0 15px 0;
+            padding: 18px 22px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+            border-left: 4px solid #c7254e;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(199, 37, 78, 0.1);
+        }
+
+        .media-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .media-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .media-container img:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+        }
+
+        .media-container video {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .caption {
+            margin-top: 15px;
+            font-style: normal;
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .card p {
+            margin: 0.4rem 0;
+            font-size: 0.92rem;
+            line-height: 1.4;
+        }
+
+        .card:hover {
+            border-color: #4169E1;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(65, 105, 225, 0.2);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: black;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 10px 0;
+            line-height: 1.7;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.9rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .comparison-table th {
+            background-color: #363636;
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background-color: #f0f7ff;
+        }
+
+        .comparison-table .highlight-row {
+            background-color: #e7f3ff;
+            font-weight: 600;
+        }
+
+        .citation {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.875em;
+            margin: 20px 0;
+            border-left: 4px solid #4169E1;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            border: 1px solid #dbdbdb;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            margin-top: 60px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+            border-top: 1px solid #e9ecef;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid rgba(65, 105, 225, 0.1);
+        }
+
+        .navbar nav {
+            display: flex;
+            gap: 0;
+            align-items: center;
+        }
+
+        .navbar a {
+            padding: 12px 20px;
+            color: rgb(128, 128, 128);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+            position: relative;
+        }
+
+        .navbar a:hover {
+            color: orange;
+            border-bottom-color: orange;
+        }
+
+        .navbar a.active {
+            color: red;
+            border-bottom-color: red;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .subtitle {
+                font-size: 1.5em;
+            }
+
+            .section {
+                padding: 20px 15px;
+            }
+
+            .section-alternate {
+                padding: 20px 15px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .links {
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.85em;
+            }
+
+            .container {
+                padding: 0 15px;
+            }
+
+            .navbar nav {
+                gap: 0;
+                overflow-x: auto;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .navbar a {
+                padding: 12px 15px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <div class="navbar">
+        <nav>
+            <a href="#overview">Overview</a>
+            <a href="#approach">Approach</a>
+            <a href="#pretrain">Pre-training</a>
+            <a href="#finetune">Fine-tuning</a>
+            <a href="#real-world">Real-World</a>
+            <a href="#comparison">Comparison</a>
+            <a href="#citation">Citation</a>
+        </nav>
+    </div>
+
+    <header>
+        <div class="container">
+            <h1>DMPO: Dispersive MeanFlow Policy Optimization</h1>
+            <div class="subtitle">One Step Is Enough</div>
+
+            <div class="authors">
+                <span class="author-block">Guowei Zou, Haitao Wang, Hejun Wu, Yukun Qian, Yuhang Wang, Weibing Li</span>
+            </div>
+
+            <div class="affiliation">
+                <span class="author-block">Sun Yat-sen University</span>
+            </div>
+
+            <div class="links">
+                <span class="link-block">
+                    <a href="#" class="btn" target="_blank">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                            </svg>
+                        </span>
+                        <span>Paper</span>
+                    </a>
+                </span>
+                <span class="link-block">
+                    <a href="#" class="btn" target="_blank">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                        </span>
+                        <span>Code</span>
+                    </a>
+                </span>
+                <span class="link-block">
+                    <a href="#" class="btn" target="_blank">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.007 2.007 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A99.788 99.788 0 0 1 7.858 2h.193zM6.4 5.209v4.818l4.157-2.408L6.4 5.209z"/>
+                            </svg>
+                        </span>
+                        <span>Video</span>
+                    </a>
+                </span>
+                <span class="link-block">
+                    <a href="#" class="btn" target="_blank">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3.563a2 2 0 0 1 1.414.586l.647.646a.5.5 0 0 0 .354.146H14.5A1.5 1.5 0 0 1 16 4v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11V4a2 2 0 0 1 2-1.5h1z"/>
+                            </svg>
+                        </span>
+                        <span>Checkpoints</span>
+                    </a>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <hr class="gradient-divider">
+
+    <!-- TL;DR Section -->
+    <section class="section">
+        <div class="container">
+            <div class="content">
+                <div class="tldr">
+                    <strong>TL;DR:</strong> We propose <strong>DMPO (Dispersive MeanFlow Policy Optimization)</strong>, a unified framework that enables <span class="highlight">true one-step generation</span> for real-time robotic control through three key components: MeanFlow for mathematically-derived single-step inference, dispersive regularization to prevent representation collapse, and RL fine-tuning to surpass expert demonstrations. DMPO achieves competitive or superior performance with <span class="highlight">5-20× inference speedup</span>, exceeding real-time requirements (<span class="highlight">>120Hz</span>) and reaching hundreds of Hertz on high-performance GPUs.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Abstract Figure -->
+    <section id="overview" class="section-white">
+        <div class="container">
+            <h2>Overview</h2>
+            <div class="content">
+                <div class="media-container">
+                    <img src="images/abstract_image_page.png" alt="DMPO Overview">
+                    <div class="caption">
+                        From efficiency-performance trade-off to practical real-time control. Top: Existing methods lie on the trade-off curve: multi-step approaches (DPPO, ReinFlow) achieve strong performance but slow inference, while one-step methods (CP, MP1, 1-DP) are fast but unstable. DMPO breaks this trade-off by occupying the upper-right region. Bottom: DMPO's two-stage approach enables both fast inference and high performance.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Approach Overview -->
+    <section id="approach" class="section-alternate">
+        <div class="container">
+            <h2>Approach Overview</h2>
+            <div class="content">
+                <p>DMPO addresses three interconnected challenges in real-time robotic control:</p>
+
+                <div class="grid">
+                    <div class="card">
+                        <h3>Challenge 1: Inference Efficiency</h3>
+                        <p>Multi-step sampling in diffusion and flow-based policies incurs significant latency, while distillation-based one-step methods require complex training pipelines.</p>
+                        <p><strong>Our Solution:</strong> MeanFlow enables mathematically-derived single-step inference without knowledge distillation, achieving <span class="highlight">694x speedup</span>.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Challenge 2: Representation Collapse</h3>
+                        <p>One-step generation methods risk mapping distinct observations to indistinguishable representations, degrading action quality.</p>
+                        <p><strong>Our Solution:</strong> Dispersive regularization encourages feature diversity across embeddings, preventing collapse without architectural modifications.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Challenge 3: Performance Ceiling</h3>
+                        <p>Pure imitation learning cannot surpass expert demonstrations, yet RL fine-tuning is impractical with slow multi-step inference.</p>
+                        <p><strong>Our Solution:</strong> One-step inference enables efficient PPO fine-tuning, breaking through the imitation learning ceiling.</p>
+                    </div>
+                </div>
+
+                <div class="media-container">
+                    <img src="images/DMPO-Framework.png" alt="DMPO Framework">
+                    <div class="caption">
+                        DMPO Framework Overview. Stage 1 (Top & Middle): Pre-training with dispersive MeanFlow. MeanFlow learns velocity fields that transform noise into actions via Vision Transformer encoding with dispersive losses to prevent representation collapse. Stage 2 (Bottom): PPO fine-tuning formulated as a two-layer policy factorization.
+                    </div>
+                </div>
+
+                <h3>Our Contributions</h3>
+                <ul>
+                    <li><strong>Framework:</strong> We introduce DMPO, a unified framework enabling stable one-step generation via principled co-design of architecture and algorithms, with 5-20× speedup over multi-step baselines.</li>
+                    <li><strong>Theory:</strong> We establish the first information-theoretic foundation proving dispersive regularization is necessary for stable one-step generation, and derive the first mathematical formulation for RL fine-tuning of one-step policies.</li>
+                    <li><strong>Validation:</strong> We achieve state-of-the-art on RoboMimic and OpenAI Gym benchmarks, and validate real-time control (>120Hz) on a Franka robot.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Pre-training Results -->
+    <section id="pretrain" class="section">
+        <div class="container">
+            <h2>Stage 1: Pre-Training Results</h2>
+            <div class="content">
+                <div class="research-question">
+                    RQ1: Can one-step generation match or exceed multi-step diffusion policies while achieving faster inference?
+                </div>
+
+                <p><strong>Answer:</strong> Yes. DMPO achieves dramatic inference efficiency gains with true one-step generation:</p>
+
+                <div class="media-container">
+                    <img src="images/selected_success_vs_frequency_large_points.png" alt="Efficiency vs Success Rate">
+                    <div class="caption">
+                        Inference efficiency vs. success rate trade-off across four RoboMimic tasks. The upper-left region (fast + high success) is ideal. MF and MF+Disp lie on the Pareto frontier, achieving 6-10x speedup over ShortCut and 25-40x over ReFlow while maintaining superior success rates.
+                    </div>
+                </div>
+
+                <div class="research-question">
+                    RQ2: Is dispersive regularization essential for preventing mode collapse in one-step generation?
+                </div>
+
+                <p><strong>Answer:</strong> Yes. Dispersive regularization significantly improves success rates by preventing representation collapse:</p>
+
+                <div class="media-container">
+                    <img src="images/evaluation_overview_success_rate.png" alt="Success Rate Comparison">
+                    <div class="caption">
+                        Success rate vs. denoising steps on four RoboMimic tasks (Lift, Can, Square, Transport). MeanFlow variants achieve near-saturated performance at 1-5 steps, while ReFlow and ShortCut require 32-128 steps. Dispersive regularization reduces variance on complex tasks.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Fine-tuning Results -->
+    <section id="finetune" class="section-alternate">
+        <div class="container">
+            <h2>Stage 2: Fine-Tuning Results</h2>
+            <div class="content">
+                <div class="research-question">
+                    RQ3: Can online RL fine-tuning push beyond the performance ceiling of offline expert data?
+                </div>
+
+                <p><strong>Answer:</strong> Yes. DMPO with only 1 denoising step achieves competitive or superior performance compared to all baselines:</p>
+
+                <h3>RoboMimic Manipulation Tasks</h3>
+                <div class="media-container">
+                    <img src="images/robomimic_comparison_combined.png" alt="RoboMimic Fine-tuning Results">
+                    <div class="caption">
+                        PPO Fine-tuning on RoboMimic tasks (Can, Square, Transport). DMPO (blue) achieves competitive or superior performance with only 1 denoising step compared to DPPO (20 steps), Gaussian baseline, and ReinFlow variants.
+                    </div>
+                </div>
+
+                <h3>OpenAI Gym Locomotion & Kitchen Tasks</h3>
+                <div class="media-container">
+                    <img src="images/gym_all_steps_combined_6tasks.png" alt="Gym Fine-tuning Results">
+                    <div class="caption">
+                        PPO Fine-tuning on OpenAI Gym locomotion (Hopper, Walker2d, Ant, Humanoid) and Kitchen manipulation tasks. DMPO with 1-step inference matches or outperforms multi-step baselines.
+                    </div>
+                </div>
+
+                <h3>Comparison with One-Step Baselines</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>NFE</th>
+                            <th>Distill.</th>
+                            <th>Lift</th>
+                            <th>Can</th>
+                            <th>Square</th>
+                            <th>Transport</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DP-C (Teacher)</td>
+                            <td>100</td>
+                            <td>-</td>
+                            <td>97%</td>
+                            <td>96%</td>
+                            <td>82%</td>
+                            <td>46%</td>
+                        </tr>
+                        <tr>
+                            <td>CP</td>
+                            <td>1</td>
+                            <td>Yes</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>65%</td>
+                            <td>38%</td>
+                        </tr>
+                        <tr>
+                            <td>OneDP-S</td>
+                            <td>1</td>
+                            <td>Yes</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>77%</td>
+                            <td>72%</td>
+                        </tr>
+                        <tr>
+                            <td>MP1</td>
+                            <td>1</td>
+                            <td>No</td>
+                            <td>95%</td>
+                            <td>80%</td>
+                            <td>35%</td>
+                            <td>38%</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>DMPO (Ours)</strong></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>No</strong></td>
+                            <td><strong>100%</strong></td>
+                            <td><strong>100%</strong></td>
+                            <td><strong>83%</strong></td>
+                            <td><strong>88%</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Model Efficiency Comparison</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Vision</th>
+                            <th>Params</th>
+                            <th>Steps</th>
+                            <th>Time (4090)</th>
+                            <th>Freq</th>
+                            <th>Speedup</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DP (DDPM)</td>
+                            <td>ResNet-18x2</td>
+                            <td>281M</td>
+                            <td>100</td>
+                            <td>391.1ms</td>
+                            <td>2.6Hz</td>
+                            <td>1x</td>
+                        </tr>
+                        <tr>
+                            <td>CP</td>
+                            <td>ResNet-18x2</td>
+                            <td>285M</td>
+                            <td>1</td>
+                            <td>5.4ms</td>
+                            <td>187Hz</td>
+                            <td>73x</td>
+                        </tr>
+                        <tr>
+                            <td>MP1</td>
+                            <td>PointNet</td>
+                            <td>256M</td>
+                            <td>1</td>
+                            <td>4.1ms</td>
+                            <td>244Hz</td>
+                            <td>96x</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>DMPO (Ours)</strong></td>
+                            <td><strong>light ViT</strong></td>
+                            <td><strong>1.78M</strong></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>0.6ms</strong></td>
+                            <td><strong>1770Hz</strong></td>
+                            <td><strong>694x</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Real-World Deployment -->
+    <section id="real-world" class="section">
+        <div class="container">
+            <h2>Real-World Deployment</h2>
+            <div class="content">
+                <div class="research-question">
+                    RQ4: Does DMPO transfer to real-world robotic systems?
+                </div>
+
+                <p><strong>Answer:</strong> Yes. We validated DMPO on a <strong>Franka-Emika-Panda</strong> robot with Intel RealSense D435i camera using an NVIDIA RTX 2080 GPU, demonstrating robust sim-to-real transfer.</p>
+
+                <div class="media-container">
+                    <img src="images/real_world.png" alt="Real Robot Experiments">
+                    <div class="caption">
+                        Real-world deployment on Franka Panda robot. Left: Hardware setup with Intel RealSense D435i camera. Right: Comparison between MP1 baseline (top row, fails on Lift and Can due to imprecise grasping caused by representation collapse) and DMPO (rows 2-3, succeeds on all four tasks including Square and Transport).
+                    </div>
+                </div>
+
+                <h3>Key Results</h3>
+                <ul>
+                    <li><strong>Real-time control:</strong> 9.6ms total latency enabling <span class="highlight">>100Hz control frequency</span></li>
+                    <li><strong>Network inference:</strong> Only 2.6ms for 1-step DMPO (4.6-18x faster than baselines)</li>
+                    <li><strong>Robust execution:</strong> Successfully completed all 4 manipulation tasks</li>
+                    <li><strong>Sim-to-real transfer:</strong> Policies trained in simulation transfer effectively to physical hardware</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Holistic Comparison -->
+    <section id="comparison" class="section-alternate">
+        <div class="container">
+            <h2>Holistic Comparison</h2>
+            <div class="content">
+                <p>Radar charts comparing DMPO against baselines across eight evaluation dimensions: Inference Speed, Model Lightweight, Success Rate, Data Efficiency, Representation Quality, Distillation Free, Beyond Demos, and Training Stability. Each dimension is scored on a 1-5 scale.</p>
+
+                <div class="media-container">
+                    <img src="images/radar_comparison_dual.png" alt="Holistic Radar Comparison">
+                    <div class="caption">
+                        <strong>Holistic radar comparison across eight dimensions.</strong> (a) RL fine-tuning methods: DMPO forms the outer envelope, achieving top scores across all dimensions. (b) Generation methods: DMPO outperforms all baselines by combining one-step inference with lightweight architecture, high data efficiency, and the ability to go beyond demonstrations through RL fine-tuning.
+                    </div>
+                </div>
+
+                <h3>Key Insights</h3>
+                <ul>
+                    <li><strong>RL Fine-tuning Methods:</strong> While ReinFlow and DPPO share the same lightweight architecture and data efficiency as DMPO, they require multi-step inference (20+ steps). Only DMPO achieves top scores across all eight dimensions.</li>
+                    <li><strong>Generation Methods:</strong> Multi-step baselines (DP, FP) suffer from slow inference. Distilled one-step methods (1-DP, CP) cannot surpass demonstrations. Teacher-free MP1 suffers from representation collapse. DMPO is the only method achieving top performance across all dimensions.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Citation -->
+    <section id="citation" class="section">
+        <div class="container">
+            <h2>Citation</h2>
+            <div class="content">
+                <div class="citation">@article{dmpo,
+    title={One Step Is Enough: Dispersive MeanFlow Policy Optimization},
+    author={Zou, Guowei and Wang, Haitao and Wu, Hejun and Qian, Yukun and Wang, Yuhang and Li, Weibing},
+    year={2025}
+}</div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="gradient-divider">
+
+    <!-- Related Work -->
+    <section class="section-white">
+        <div class="container">
+            <h2>Related Work</h2>
+            <div class="content">
+                <ul>
+                    <li><strong><a href="https://arxiv.org/abs/2303.04137" target="_blank" style="color: #6f3be8; text-decoration: none;">Diffusion Policy</a></strong> (RSS 2023): Pioneered diffusion models for visuomotor control</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">DPPO</a></strong> (ICLR 2025): RL fine-tuning for diffusion policies</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">ReinFlow</a></strong> (NeurIPS 2025): Flow matching with online RL fine-tuning</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">Consistency Policy</a></strong> (RSS 2024): Distilled one-step generation</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">OneDP</a></strong> (ICML 2025): One-step diffusion policy via distillation</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">MP1</a></strong> (2025): MeanFlow for robotic manipulation (concurrent work)</li>
+                    <li><strong><a href="#" target="_blank" style="color: #6f3be8; text-decoration: none;">MeanFlow</a></strong> (NeurIPS 2025): Mean flows for one-step generative modeling</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 DMPO Project. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
